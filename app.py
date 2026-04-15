@@ -2,9 +2,15 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
+import traceback
 
-from inference.predict_freight import predict_freight_cost
-from inference.predict_invoice_flag import predict_invoice_flag
+try:
+    from inference.predict_freight import predict_freight_cost
+    from inference.predict_invoice_flag import predict_invoice_flag
+except Exception as e:
+    st.error(f"❌ Error loading prediction modules: {e}")
+    st.error(traceback.format_exc())
+    st.stop()
 
 # ---------------------------------------------------------
 # Page Configuration
@@ -86,17 +92,21 @@ if selected_model == "Freight Cost Prediction":
         submit_freight = st.form_submit_button("🔮 Predict Freight Cost")
 
     if submit_freight:
-        input_data = {
-            "Dollars": [dollars]
-        }
+        try:
+            input_data = {
+                "Dollars": [dollars]
+            }
 
-        prediction = predict_freight_cost(input_data)['predicted_freight']
-        st.success("Prediction completed successfully.")
+            prediction = predict_freight_cost(input_data)['predicted_freight']
+            st.success("Prediction completed successfully.")
 
-        st.metric(
-            label="📊 Estimated Freight Cost",
-            value=f"${prediction[0]:,.2f}"
-        )
+            st.metric(
+                label="📊 Estimated Freight Cost",
+                value=f"${prediction[0]:,.2f}"
+            )
+        except Exception as e:
+            st.error(f"❌ Error during prediction: {e}")
+            st.error(traceback.format_exc())
 
 # ---------------------------------------------------------
 # Invoice Flag Prediction
@@ -149,24 +159,28 @@ else:
         submit_flag = st.form_submit_button("🧠 Evaluate Invoice Risk")
 
     if submit_flag:
-        input_data = {
-            "invoice_quantity": [invoice_quantity],
-            "invoice_dollars": [invoice_dollars],
-            "Freight": [freight],
-            "total_item_quantity": [total_item_quantity],
-            "total_item_dollars": [total_item_dollars]
-        }
+        try:
+            input_data = {
+                "invoice_quantity": [invoice_quantity],
+                "invoice_dollars": [invoice_dollars],
+                "Freight": [freight],
+                "total_item_quantity": [total_item_quantity],
+                "total_item_dollars": [total_item_dollars]
+            }
 
-        flag_result = predict_invoice_flag(input_data)
-        is_flagged = bool(flag_result['flag_prediction'].values[0])
-        flag_probability = flag_result['flag_probability'].values[0]
+            flag_result = predict_invoice_flag(input_data)
+            is_flagged = bool(flag_result['flag_prediction'].values[0])
+            flag_probability = flag_result['flag_probability'].values[0]
 
-        if is_flagged:
-            st.error("🚨 Invoice requires **MANUAL APPROVAL**")
-        else:
-            st.success("✅ Invoice is **SAFE for Auto-Approval**")
-        
-        st.metric(
-            label="📊 Risk Probability",
-            value=f"{flag_probability:.2%}"
-        )
+            if is_flagged:
+                st.error("🚨 Invoice requires **MANUAL APPROVAL**")
+            else:
+                st.success("✅ Invoice is **SAFE for Auto-Approval**")
+            
+            st.metric(
+                label="📊 Risk Probability",
+                value=f"{flag_probability:.2%}"
+            )
+        except Exception as e:
+            st.error(f"❌ Error during prediction: {e}")
+            st.error(traceback.format_exc())
